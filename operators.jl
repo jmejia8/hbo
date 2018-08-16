@@ -1,17 +1,20 @@
 function Selection(Old::xf_indiv, New::xf_indiv, searchType::Symbol=:minimize; leq::Bool=false)
+    Newf = New.F + 100New.f
+    Oldf = Old.F + 100Old.f
+
     if searchType == :minimize
         if leq
-            return New.F <= Old.F
+            return Newf <= Oldf
         end
 
-        return New.F < Old.F
+        return Newf < Oldf
     end
     
     if leq
-        return New.F >= Old.F
+        return Newf >= Oldf
     end
     
-    return New.F > Old.F
+    return Newf > Oldf
 end
 
 # Deb rules (selection)
