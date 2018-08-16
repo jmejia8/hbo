@@ -32,7 +32,9 @@ function initializePop(N::Int, D::Int, a::Vector{Float64}, b::Vector{Float64}, i
     return a'  .+ (b - a)' .* rand(N, D)
 end
 
-function initializePop(F::Function, f::Function, N::Int, D_ul::Int, D_ll::Int, bounds_ul::Matrix, bounds_ll::Matrix)
+function initializePop(F::Function, f::Function, N::Int, bounds_ul::Matrix, bounds_ll::Matrix)
+    D_ul, D_ll = size(bounds_ul, 2), size(bounds_ll, 2) 
+   
     a_ul, b_ul = bounds_ul
     a_ll, b_ll = bounds_ll
    
