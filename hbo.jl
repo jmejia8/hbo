@@ -96,12 +96,12 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
     # general parameters
     searchType = :minimize
     D = D_ul + D_ll
-    κ = 7
+    κ = 3
     η_max = 2.0
     N = κ*D
     α = 10
     τ = 10
-    max_evals = 2000D
+    max_evals = 3000D
     #############################
     # auto conf
     T = round(Int, max_evals / N)
@@ -163,15 +163,15 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
 
 
             # replace worst element
-            if Selection(Population[i], sol, searchType, t,T)
+            if Selection(Population[i], sol, searchType)
                 Population[getWorstInd(Population, searchType)] = sol
 
-                if Selection(best, sol, searchType,t,T)
+                if Selection(best, sol, searchType)
                     best = sol
                 end
             end
             
-            stop = nevals_ul >= max_evals
+            stop = nevals_ul >= max_evals || (abs(best.f) < 1e-4 && abs(best.F) < 1e-4)
             if stop
                 break
             end
