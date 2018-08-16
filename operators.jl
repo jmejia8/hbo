@@ -1,6 +1,6 @@
 function Selection(Old::xf_indiv, New::xf_indiv, searchType::Symbol=:minimize; leq::Bool=false)
-    Newf = New.F + 100New.f
-    Oldf = Old.F + 100Old.f
+    Newf = New.F + 10New.f
+    Oldf = Old.F + 10Old.f
 
     if searchType == :minimize
         if leq
