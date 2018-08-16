@@ -1,5 +1,36 @@
-import Metaheuristics
-const mh = Metaheuristics
+
+function initializePopY(fobj, best, N, D, a, b)
+    L = 0.5*(b - a)
+    r = 0.01
+
+    # println(size(L))
+    y0 = best.y
+
+    a2 = y0 .- r*L
+    b2 = y0 .+ r*L
+
+    Y = a2' .+ (b2- a2)' .* rand(N, D)
+
+
+    y = Y[1,:]
+    child = mh.generateChild(y, fobj(y))
+    individual = typeof(child)
+
+    # population array
+    population = Array{individual, 1}([])
+
+    # first individual
+    push!(population, child)
+    push!(population, mh.generateChild(y0, best.f))
+
+    for i in 3:N
+        y = Y[i,:]
+        child = mh.generateChild(y, fobj(y))
+        push!(population, child)
+    end
+
+    return population
+end
 
 function eca(f::Function, best, D::Int, bounds)
     # general parameters
@@ -8,16 +39,16 @@ function eca(f::Function, best, D::Int, bounds)
     K = 7
     α = 10
     N = div(K*D, 2)
-    bounds = [upper_bounds lower_bounds]
     max_evals = 100D
     #############################
 
-    fobj(y) = f(best.x, y)
+    x = best.x
+    fobj(y) = f(x, y)
 
     a, b = bounds[1,:], bounds[2,:]
 
     # initialize population
-    Population = initializePopY(fobj, N, D, a, b, :uniform)
+    Population = initializePopY(fobj, best, N, D, a, b)
 
     # current evaluations
     nevals = N
@@ -38,7 +69,7 @@ function eca(f::Function, best, D::Int, bounds)
         for i in 1:N
 
             # current
-            x = Population[i].x
+            y = Population[i].x
 
             # generate U masses
             U = mh.getU(Population, K, I, i, N)
@@ -53,7 +84,7 @@ function eca(f::Function, best, D::Int, bounds)
             u = U[u_worst].x
             
             # current-to-center/bin
-            h = x + η * (c - u)
+            h = y + η * (c - u)
             
             h = mh.correct(h, a, b, true)
 
@@ -80,5 +111,6 @@ function eca(f::Function, best, D::Int, bounds)
         t += 1
     end
 
-    return best
+    return best.x, best.f, nevals
 end
+
