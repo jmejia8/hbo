@@ -1,79 +1,119 @@
+import Metaheuristics
+const mh = Metaheuristics
+
+include("structures.jl")
 include("tools.jl")
+include("operators.jl")
+include("eca.jl")
 
-function apply_nested!(P, f, D_upper, D_lower, lower_bounds)
-	return 0
-end
 
-function center(U::Array, mass::Vector{Float64})
-    d = length(U[1].x)
-
-    c = zeros(Float64, d)
+function fitnessToMass(fitness::Array{Float64,2}, searchType::Symbol)
+    m_ul = minimum(fitness[:,1])
+    m_ll = minimum(fitness[:,2])
     
-    for i = 1:length(mass)
-        c += mass[i] * U[i].x
-    end
-
-    return c / sum(mass)
-end
-
-function center(U::Array, V::Array, searchType::Symbol)
-    n = length(U)
-
-    mass = getMass(U, searchType)
-
-    return center(U, mass), getWorstInd(U, searchType), getBestInd(U, searchType)
-end
-
-function fitnessToMass(fitness::Vector{Float64}, searchType::Symbol)
-    m = minimum(fitness)
-    
-    if m < 0
-        fitness = 2abs(m) + fitness
-    end
+    m_ul < 0 && (fitness[:,1] = 2abs(m_ul) + fitness[:,1])
+    m_ll < 0 && (fitness[:,1] = 2abs(m_ll) + fitness[:,2])
+  
 
     if searchType == :minimize
-        fitness = 2maximum(fitness) - fitness
+        fitness[:,1] = 2maximum(fitness[:,1]) - fitness[:,1]
+        fitness[:,2] = 2maximum(fitness[:,2]) - fitness[:,2]
     end
 
     return fitness
 end
 
-function getMass(U, searchType::Symbol)
-    n, d = length(U), length(U[1].x)
 
-    fitness = zeros(Float64, n)
+function getMass(U::Array, V::Array, searchType::Symbol)
+    n = length(U)
+
+    fitness = zeros(Float64, n, 2)
     
     for i = 1:n
-        fitness[i] = U[i].f
+        fitness[i, 1] = 10U[i].F + U[i].f
+        fitness[i, 2] = V[i].F + 10V[i].f
     end
 
     return fitnessToMass(fitness, searchType)
 end
 
 
-function hbo(F::Function, f::Function, D_upper, D_lower, bounds_ul::Matrix, bounds_ll::Matrix)
+function center(U::Array, V::Array, mass::Array{Float64,2})
+    d_ul = length(U[1].x)
+    d_ll = length(V[1].y)
+
+    c_ul = zeros(Float64, d_ul)
+    c_ll = zeros(Float64, d_ll)
+    
+    for i = 1:length(U)
+        c_ul += mass[i,1] * U[i].x
+        c_ll += mass[i,2] * V[i].y
+    end
+
+    return c_ul / sum(mass[:,1]), c_ll / sum(mass[:,2])
+end
+
+function center(U::Array, V::Array, searchType::Symbol)
+    n = length(U)
+
+    mass = getMass(U, V, searchType)
+
+    a, b = center(U, V, mass)
+    return a, b, getWorstInd(U, searchType), indmin(mass[:,2])
+end
+
+
+function apply_nested!(P, F, f, D_ul, D_ll, bounds)
+	nevals_ul = 0
+    nevals_ll = 0
+    
+    for i = 1:length(P)
+		y, fy, nevals = eca(f, P[i], D_ll, bounds)
+
+        if fy >= P[i].f
+            continue
+        end
+
+
+        P[i].y = y
+        oldf = P[i].f
+        P[i].f = fy
+        oldF = P[i].F
+        P[i].F = F(P[i].x, P[i].y)
+
+        nevals_ul += 1
+        nevals_ll += nevals
+        @printf("fnew = %e \t fold = %e \t | \t Fnew = %e \t Fold = %e  \n", P[i].f, oldf, P[i].F, oldF)
+	end
+
+    return nevals_ul, nevals_ll
+
+end
+
+function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll::Matrix)
     D_ul, D_ll = size(bounds_ul, 2), size(bounds_ll, 2) 
 
     # general parameters
     searchType = :minimize
-    η_max = 2.0
+    D = D_ul + D_ll
     κ = 7
+    η_max = 2.0
+    N = κ*D
     α = 10
-    D = D_upper + D_lower
-    N = 2κ*D
     τ = 10
-    max_evals = 1000D
+    max_evals = 2000D
     #############################
     # auto conf
     T = round(Int, max_evals / N)
-    τ_ratio = div(T, τ)
+    τ_ratio = 1 +div(T, τ)
     #############################
 
     # initialize population
-    Population = initializePop(F, f, N, D, bounds_ul, bounds_ll)
+    Population = initializePop(F, f, N, bounds_ul, bounds_ll)
 
     # current evaluations
-    nevals = N
+    nevals_ul = N
+    nevals_ll = N
 
     # stop condition
     stop = false
@@ -108,45 +148,51 @@ function hbo(F::Function, f::Function, D_upper, D_lower, bounds_ul::Matrix, boun
 
             # u: worst element in U
             u = U[u_worst].x
-            v = U[u_worst].y
+            v = V[v_worst].y
             
             # current-to-center
-            h_ul = x + η_ul * (c_ul - u)
-            h_ll = y + η_ll * (c_ll - v)
+            p = x + η_ul * (c_ul - u)
+            q = y + η_ll * (c_ll - v)
             
-            h_ul = mh.correct(h, a, b, true)
-            h_ll = mh.correct(h, a, b, true)
+            p = correct(p, bounds_ul)
+            q = correct(q, bounds_ll)
 
-            sol = mh.generateChild(h, φ(h))
-            nevals += 1
+            sol = generateChild(p, q, F(p, q), f(p, q))
+            nevals_ul += 1
+            nevals_ll += 1
 
 
             # replace worst element
-            if mh.Selection(Population[i], sol, searchType)
-                Population[mh.getWorstInd(Population, searchType)] = sol
+            if Selection(Population[i], sol, searchType, t,T)
+                Population[getWorstInd(Population, searchType)] = sol
 
-                if mh.Selection(best, sol, searchType)
+                if Selection(best, sol, searchType,t,T)
                     best = sol
                 end
             end
             
-            stop = nevals >= max_evals
+            stop = nevals_ul >= max_evals
             if stop
                 break
             end
         end
 
-        if t != 0 && t % τ_ratio == 0
-            apply_nested!(Population, f, D_upper, D_lower, lower_bounds)
-        end
+        # if t != 0 && t % τ_ratio == 0
+        #     n1, n2 = apply_nested!(Population, F, f, D_ul, D_ll, bounds_ll)
+        #     nevals_ul += n1
+        #     nevals_ll += n2  
+        # end
 
         t += 1
     end
 
+
+
     println("+----------------------------------+")
     println("|          HBO results             |")
     println("+----------------------------------+")
-    mh.printResults(best, Population, t, nevals)
+    printResults(best, Population, t, nevals_ul, nevals_ll)
     println("+----------------------------------+")
-    return best.x, best.f
+
+    return best.x, "\n", best.y
 end
