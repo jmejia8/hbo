@@ -2,19 +2,19 @@
 #      Solutions and population functions
 #          for Matrix representation
 ###################################################
-function correctSol(z::Vector{Float64}, a::Vector{Float64}, b::Vector{Float64})
+function correctSol(z::Vector{Float64}, bounds::Matrix)
     # Correct solution
 
     for i = 1:length(z)
-        if !( a[i] <= z[i] <= b[i] )
-            z[i] = a[i] + (b[i] - a[i])*rand()
+        if !( bounds[1,i] <= z[i] <= bounds[2,i] )
+            z[i] = bounds[1,i] + (bounds[2,i] - bounds[1,i])*rand()
         end
     end
     
     return z
 end
 
-correct(z::Vector{Float64}, a::Vector{Float64}, b::Vector{Float64}) = correctSol(z, a, b)
+correct(z::Vector{Float64}, bounds::Matrix) = correctSol(z, bounds)
 
 
 function initializePop(N::Int, D::Int, a::Vector{Float64}, b::Vector{Float64}, initType::Symbol=:uniform)
@@ -35,8 +35,8 @@ end
 function initializePop(F::Function, f::Function, N::Int, bounds_ul::Matrix, bounds_ll::Matrix)
     D_ul, D_ll = size(bounds_ul, 2), size(bounds_ll, 2) 
    
-    a_ul, b_ul = bounds_ul
-    a_ll, b_ll = bounds_ll
+    a_ul, b_ul = bounds_ul[1,:], bounds_ul[2,:]
+    a_ll, b_ll = bounds_ll[1,:], bounds_ll[2,:]
    
     X = initializePop(N, D_ul, a_ul, b_ul)
     Y = initializePop(N, D_ll, a_ll, b_ll)
