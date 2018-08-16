@@ -1,20 +1,66 @@
-import Metaheuristics
-const mh = Metaheuristics
-
+include("tools.jl")
 
 function apply_nested!(P, f, D_upper, D_lower, lower_bounds)
 	return 0
 end
 
-function hbo(F::Function, f::Function, D_upper, D_lower, upper_bounds, lower_bounds)
+function center(U::Array, mass::Vector{Float64})
+    d = length(U[1].x)
+
+    c = zeros(Float64, d)
+    
+    for i = 1:length(mass)
+        c += mass[i] * U[i].x
+    end
+
+    return c / sum(mass)
+end
+
+function center(U::Array, V::Array, searchType::Symbol)
+    n = length(U)
+
+    mass = getMass(U, searchType)
+
+    return center(U, mass), getWorstInd(U, searchType), getBestInd(U, searchType)
+end
+
+function fitnessToMass(fitness::Vector{Float64}, searchType::Symbol)
+    m = minimum(fitness)
+    
+    if m < 0
+        fitness = 2abs(m) + fitness
+    end
+
+    if searchType == :minimize
+        fitness = 2maximum(fitness) - fitness
+    end
+
+    return fitness
+end
+
+function getMass(U, searchType::Symbol)
+    n, d = length(U), length(U[1].x)
+
+    fitness = zeros(Float64, n)
+    
+    for i = 1:n
+        fitness[i] = U[i].f
+    end
+
+    return fitnessToMass(fitness, searchType)
+end
+
+
+function hbo(F::Function, f::Function, D_upper, D_lower, bounds_ul::Matrix, bounds_ll::Matrix)
+    D_ul, D_ll = size(bounds_ul, 2), size(bounds_ll, 2) 
+
     # general parameters
     searchType = :minimize
     η_max = 2.0
-    K = 7
+    κ = 7
     α = 10
     D = D_upper + D_lower
-    N = 2K*D
-    bounds = [upper_bounds lower_bounds]
+    N = 2κ*D
     τ = 10
     max_evals = 1000D
     #############################
@@ -23,13 +69,8 @@ function hbo(F::Function, f::Function, D_upper, D_lower, upper_bounds, lower_bou
     τ_ratio = div(T, τ)
     #############################
 
-    # penalized function
-    φ(z) = F(z[1:D_upper], z[D_upper+1:end]) + α * f(z[1:D_upper], z[D_upper+1:end])
-
-    a, b = bounds[1,:], bounds[2,:]
-
     # initialize population
-    Population = mh.initializePop(φ, N, D, a, b, :uniform)
+    Population = initializePop(F, f, N, D, bounds_ul, bounds_ll)
 
     # current evaluations
     nevals = N
@@ -41,33 +82,40 @@ function hbo(F::Function, f::Function, D_upper, D_lower, upper_bounds, lower_bou
     t = 0
 
     # best solution
-    best = mh.getBest(Population, searchType)
+    best = getBest(Population, searchType)
   
     # start search
     while !stop
-        I = randperm(N)
+        I_ul = randperm(N)
+        I_ll = randperm(N)
 
         for i in 1:N
 
             # current
             x = Population[i].x
+            y = Population[i].y
 
             # generate U masses
-            U = mh.getU(Population, K, I, i, N)
+            U = mh.getU(Population, κ, I_ul, i, N)
+            V = mh.getU(Population, κ, I_ll, i, N)
             
             # generate center of mass
-            c, u_worst, u_best = mh.center(U, searchType)
+            c_ul, c_ll, u_worst, v_worst = center(U, V, searchType)
 
             # stepsize
-            η = η_max * rand()
+            η_ul = η_max * rand()
+            η_ll = η_max * rand()
 
             # u: worst element in U
             u = U[u_worst].x
+            v = U[u_worst].y
             
-            # current-to-center/bin
-            h = x + η * (c - u)
+            # current-to-center
+            h_ul = x + η_ul * (c_ul - u)
+            h_ll = y + η_ll * (c_ll - v)
             
-            h = mh.correct(h, a, b, true)
+            h_ul = mh.correct(h, a, b, true)
+            h_ll = mh.correct(h, a, b, true)
 
             sol = mh.generateChild(h, φ(h))
             nevals += 1

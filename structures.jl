@@ -1,11 +1,11 @@
-struct xf_indiv # Single Objective
+mutable struct xf_indiv # Single Objective
     x::Vector{Float64}
     y::Vector{Float64}
     F::Float64
     f::Float64
 end
 
-struct xfg_indiv # Single Objective Constraied
+mutable struct xfg_indiv # Single Objective Constraied
     x::Vector{Float64}
     y::Vector{Float64}
     F::Float64
@@ -14,7 +14,7 @@ struct xfg_indiv # Single Objective Constraied
     g::Vector{Float64}
 end
 
-struct xfgh_indiv # Single Objective Constraied
+mutable struct xfgh_indiv # Single Objective Constraied
     x::Vector{Float64}
     y::Vector{Float64}
     F::Float64
@@ -25,7 +25,7 @@ struct xfgh_indiv # Single Objective Constraied
     h::Vector{Float64}
 end
 
-struct xFgh_indiv # multi Objective Constraied
+mutable struct xFgh_indiv # multi Objective Constraied
     x::Vector{Float64}
     y::Vector{Float64}
     F::Vector{Float64}
