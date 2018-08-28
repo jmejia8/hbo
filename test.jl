@@ -2,62 +2,38 @@ using BilevelBenchmark
 
 include("hbo.jl")
 
-function genBounds(uBounds, lBounds, p, q, r, s)
-
-    return [repmat(uBounds[:,1], 1, p) repmat(uBounds[:,2], 1, r)],
-           [repmat(lBounds[:,1], 1, q) repmat(lBounds[:,2], 1, r + s)]
-end
-
 # configures problem
 function getBilevel(fnum::Int)
 
     if fnum < 0
        F_(x, y) = sum(x.^2 + 0.1cos.(4π*x) + y.^2 + 0.1sin.(4π*y))
        f_(x, y) = sum((x.^2 + y.^2 - 1.0).^2)
-       upper_D = 1
-       lower_D = 1
+       D_ul = 1
+       D_ll = 1
 
-       upper_bounds = Array{Float64, 2}([-1  1])'
+       bounds_ul = Array{Float64, 2}([-1  1])'
        
-       lower_bounds = upper_bounds
+       bounds_ll = bounds_ul
 
-       return f_, F_, lower_D, upper_D, lower_bounds, upper_bounds
-    end
-
-    if fnum == 1 || fnum == 3
-        ub = [-5 10; -5 10.0]
-        lb = [-5 10; -π/2 π/2]
-    elseif fnum == 2 || fnum == 7
-        ub = [-5 10; -5 1.0]
-        lb = [ -5.0  10; 0.0  e]
-    elseif fnum == 4
-        ub = [-5.0 10; -1  1]
-        lb = [-5.0 10;  0  e]
-    elseif fnum == 5  || fnum == 6 || fnum == 8
-        ub = [-5.0 10; -5.0  10.0]
-        lb = [-5.0 10; -5.0  10.0]
-    end
-
-    if fnum == 6
-        p, q, r, s = 3, 1, 2, 2
-    else
-        p, q, r, s = 3, 3, 2, 0
+       return f_, F_, D_ll, D_ul, bounds_ll, bounds_ul
     end
     
-    upper_D, lower_D = p + r, q + r + s
+    D_ul = D_ll = 5
 
-    upper_bounds, lower_bounds = genBounds( ub', lb', p, q, r, s ) 
+    bounds_ul, bounds_ll = bilevel_ranges(D_ul, D_ll, fnum)
 
     # leader
-    F(x::Array{Float64}, y::Array{Float64}) =  SMD_leader(x, y, fnum, p, q, r, s)
+    F(x::Array{Float64}, y::Array{Float64}) =  bilevel_leader(x, y, fnum)
 
     # follower
-    f(x::Array{Float64}, y::Array{Float64}) =SMD_follower(x, y, fnum, p, q, r, s)
+    f(x::Array{Float64}, y::Array{Float64}) =bilevel_follower(x, y, fnum)
     
-    return f, F, lower_D, upper_D, lower_bounds, upper_bounds
+    return f, F, D_ll, D_ul, bounds_ll, bounds_ul
 end
 
-function test(fnum = 1)
-    f, F, lower_D, upper_D, lower_bounds, upper_bounds = getBilevel(fnum)
-    hbo(F, f, upper_D, lower_D, upper_bounds, lower_bounds);
+function test(fnum = 7)
+    f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
+    x, y, _ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll)
+
+    return 
 end
