@@ -45,10 +45,10 @@ function getBilevel(fnum::Int)
 end
 
 function test()
-	fnum = 1
+    fnum = 1
 
-	f, F, lower_D, upper_D, lower_bounds, upper_bounds = getBilevel(fnum)
-	hbo(F, f, upper_D, lower_D, upper_bounds, lower_bounds)
+    f, F, lower_D, upper_D, lower_bounds, upper_bounds = getBilevel(fnum)
+    hbo(F, f, upper_D, lower_D, upper_bounds, lower_bounds)
 end
 
 test()
