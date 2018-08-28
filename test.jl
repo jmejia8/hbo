@@ -11,6 +11,19 @@ end
 # configures problem
 function getBilevel(fnum::Int)
 
+    if fnum < 0
+       F_(x, y) = sum(x.^2 + 0.1cos.(4π*x) + y.^2 + 0.1sin.(4π*y))
+       f_(x, y) = sum((x.^2 + y.^2 - 1.0).^2)
+       upper_D = 1
+       lower_D = 1
+
+       upper_bounds = Array{Float64, 2}([-1  1])'
+       
+       lower_bounds = upper_bounds
+
+       return f_, F_, lower_D, upper_D, lower_bounds, upper_bounds
+    end
+
     if fnum == 1 || fnum == 3
         ub = [-5 10; -5 10.0]
         lb = [-5 10; -π/2 π/2]
@@ -44,11 +57,7 @@ function getBilevel(fnum::Int)
     return f, F, lower_D, upper_D, lower_bounds, upper_bounds
 end
 
-function test()
-    fnum = 1
-
+function test(fnum = 1)
     f, F, lower_D, upper_D, lower_bounds, upper_bounds = getBilevel(fnum)
-    hbo(F, f, upper_D, lower_D, upper_bounds, lower_bounds)
+    hbo(F, f, upper_D, lower_D, upper_bounds, lower_bounds);
 end
-
-test()
