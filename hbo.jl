@@ -194,5 +194,5 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
     printResults(best, Population, t, nevals_ul, nevals_ll)
     println("+----------------------------------+")
 
-    return best.x, "\n", best.y
+    return best.x, best.y, Population
 end
