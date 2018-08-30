@@ -1,20 +1,19 @@
-function Selection(Old::xf_indiv, New::xf_indiv, searchType::Symbol=:minimize; leq::Bool=false)
-    Newf = New.F + 10New.f
-    Oldf = Old.F + 10Old.f
+function is_better_mass(S1, S2, searchType=:minimize)
+    # S1 is better than S2
+    α = 10.0
+
+    m1 = S1.F + α*S1.f
+    m2 = S2.F + α*S2.f
 
     if searchType == :minimize
-        if leq
-            return Newf <= Oldf
-        end
+        return  m1 < m2
+    end
 
-        return Newf < Oldf
-    end
-    
-    if leq
-        return Newf >= Oldf
-    end
-    
-    return Newf > Oldf
+    return m1 > m2
+end
+
+function Selection(Old::xf_indiv, New::xf_indiv, searchType::Symbol=:minimize; leq::Bool=false)
+    return is_better_mass(New, Old, searchType)
 end
 
 # Deb rules (selection)
@@ -29,18 +28,7 @@ function Selection(Old::xfgh_indiv, New::xfgh_indiv, searchType::Symbol=:minimiz
         return false
     end
 
-    if searchType == :minimize
-        if leq
-            return New.F <= Old.F
-        end
-        return New.F < Old.F
-    end
-    
-    if leq
-        return New.F >= Old.F
-    end
-    
-    return New.F > Old.F
+    return is_better_mass(New, Old, searchType)
 end
 
 # Deb rules (selection)
@@ -54,17 +42,7 @@ function Selection(Old::xfg_indiv, New::xfg_indiv, searchType::Symbol=:minimize;
         return false
     end
 
-    if searchType == :minimize
-        if leq
-            return New.f <= Old.f
-        end
-        return New.f < Old.f
-    end
-    if leq
-        return New.f >= Old.f
-    end
-    
-    return New.f > Old.f
+    return is_better_mass(New, Old, searchType)
 end
 
 function getBest(Population, searchType::Symbol = :minimize)
@@ -95,7 +73,7 @@ function getWorstInd(Population, searchType::Symbol = :minimize)
     worst = 1
 
     for i = 2:length(Population)
-        if Selection(Population[i], Population[worst])
+        if Selection(Population[i], Population[worst], searchType)
             worst = i
         end
     end
