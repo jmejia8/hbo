@@ -31,9 +31,13 @@ function getBilevel(fnum::Int)
     return f, F, D_ll, D_ul, bounds_ll, bounds_ul
 end
 
-function test(fnum = 7)
-    f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
-    x, y, _ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll)
+function test()
+
+    for fnum = 1:8
+      f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
+      x, y, best, nevals, _ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll; showResults = false)
+      @printf("SMD%d \t F = %e \t f = %e  \t nfes = %d \n", fnum, best.F, best.f, nevals)
+    end
 
     return 
 end

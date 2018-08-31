@@ -24,14 +24,14 @@ function fitnessToMass(fitness::Array{Float64,2}, searchType::Symbol)
 end
 
 
-function getMass(U::Array, V::Array, searchType::Symbol)
+function getMass(U::Array, V::Array, α, β, searchType::Symbol)
     n = length(U)
 
     fitness = zeros(Float64, n, 2)
     
     for i = 1:n
-        fitness[i, 1] = 10U[i].F + U[i].f
-        fitness[i, 2] = V[i].F + 10V[i].f
+        fitness[i, 1] = U[i].F + α*U[i].f
+        fitness[i, 2] = β*V[i].F + V[i].f
     end
 
     return fitnessToMass(fitness, searchType)
@@ -53,10 +53,10 @@ function center(U::Array, V::Array, mass::Array{Float64,2})
     return c_ul / sum(mass[:,1]), c_ll / sum(mass[:,2])
 end
 
-function center(U::Array, V::Array, searchType::Symbol)
+function center(U::Array, V::Array, α, β, searchType::Symbol)
     n = length(U)
 
-    mass = getMass(U, V, searchType)
+    mass = getMass(U, V, α, β, searchType)
 
     a, b = center(U, V, mass)
     return a, b, getWorstInd(U, searchType), indmin(mass[:,2])
@@ -90,7 +90,21 @@ function apply_nested!(P, F, f, D_ul, D_ll, bounds)
 
 end
 
-function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll::Matrix)
+function getWorstVals(Population::Array, searchType=:minimize)
+    Fworst, fworst = Population[1].F, Population[1].f
+
+    for i = 2:length(Population)
+        Fworst <  Population[i].F && (Fworst =  Population[i].F)
+        fworst <  Population[i].f && (fworst =  Population[i].f)
+    end
+
+    return Fworst, fworst
+end
+
+α = β = 0.1
+α0 = β0 = 0.1
+
+function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll::Matrix; showResults = true)
     D_ul, D_ll = size(bounds_ul, 2), size(bounds_ll, 2) 
 
     # general parameters
@@ -99,17 +113,28 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
     κ = 3
     η_max = 2.0
     N = κ*D
-    α = 10
-    τ = 10
-    max_evals = 3000D
+    max_evals_ul = 3000D
+    max_evals_ll = 3000D
     #############################
     # auto conf
-    T = round(Int, max_evals / N)
-    τ_ratio = 1 +div(T, τ)
+    # T = round(Int, max_evals / N)
     #############################
 
     # initialize population
     Population = initializePop(F, f, N, bounds_ul, bounds_ll)
+
+
+    Fworst, fworst = getWorstVals(Population, searchType)
+
+    # println(Fworst)
+    # println(fworst)
+ 
+    ########################################################
+    # the sequences
+    α0 = β0 = 0.1
+    # β(t::Int, β0::Float64 = 10.0) = (1/β0) * ( 1.0 - (t / max_evals_ll)^3 )
+    # α(t::Int, α0::Float64 = 10.0) = β(t, α0)
+    ########################################################
 
     # current evaluations
     nevals_ul = N
@@ -123,12 +148,16 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
 
     # best solution
     best = getBest(Population, searchType)
+
   
     # start search
     while !stop
         I_ul = randperm(N)
         I_ll = randperm(N)
 
+        # @printf("t = %d \t a = %e \t b = %e \n", t, α, β)
+        global α = α0 * (1.0 - (nevals_ul / max_evals_ul)^3)
+        global β = β0 * (1.0 - (nevals_ul / max_evals_ll)^3)
         for i in 1:N
 
             # current
@@ -140,7 +169,7 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
             V = mh.getU(Population, κ, I_ll, i, N)
             
             # generate center of mass
-            c_ul, c_ll, u_worst, v_worst = center(U, V, searchType)
+            c_ul, c_ll, u_worst, v_worst = center(U, V, α, β, searchType)
 
             # stepsize
             η_ul = η_max * rand()
@@ -163,15 +192,16 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
 
 
             # replace worst element
-            if Selection(Population[i], sol, searchType)
+            if is_better_mass(sol, Population[i], searchType)
                 Population[getWorstInd(Population, searchType)] = sol
 
-                if Selection(best, sol, searchType)
+                if is_better_mass(sol, best, searchType)
                     best = sol
+                    # @printf("F = %e \t f = %e  \n", best.F, best.f)
                 end
             end
             
-            stop = nevals_ul >= max_evals || (abs(best.f) < 1e-4 && abs(best.F) < 1e-4)
+            stop = nevals_ul >= max_evals_ul || nevals_ll >= max_evals_ll || (abs(best.f) < 1e-4 && abs(best.F) < 1e-4)
             if stop
                 break
             end
@@ -188,11 +218,13 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
 
 
 
-    println("+----------------------------------+")
-    println("|          HBO results             |")
-    println("+----------------------------------+")
-    printResults(best, Population, t, nevals_ul, nevals_ll)
-    println("+----------------------------------+")
+    if showResults
+        println("+----------------------------------+")
+        println("|          HBO results             |")
+        println("+----------------------------------+")
+        printResults(best, Population, t, nevals_ul, nevals_ll)
+        println("+----------------------------------+")
+    end
 
-    return best.x, best.y, Population
+    return best.x, best.y, best, nevals_ul, Population
 end

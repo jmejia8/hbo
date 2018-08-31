@@ -1,9 +1,9 @@
 function is_better_mass(S1, S2, searchType=:minimize)
     # S1 is better than S2
-    α = 10.0
+    # α = 10.0
 
-    m1 = S1.F + α*S1.f
-    m2 = S2.F + α*S2.f
+    m1 = β* S1.F+ S1.f
+    m2 = β*S2.F + S2.f
 
     if searchType == :minimize
         return  m1 < m2
