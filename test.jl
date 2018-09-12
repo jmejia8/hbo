@@ -42,7 +42,21 @@ function feasible_map(fnum)
     Nsamples = 1000
     a = upper_bounds[1,:]
     b = upper_bounds[2,:]
+   
+    # k = 5
+    # g = linspace(0, 1, k)
+    # R = zeros(upper_D^k, upper_D)
     
+    # l = 1
+    # for i = 1:upper_D^k
+    #     for j = 1:upper_D
+    #         R[i, j] = g[l]
+    #     end
+    #     l = 1 + (l % k)
+
+    # end
+
+
     x = a' .+ (b -a)' .* rand(Nsamples, upper_D)
 
 
@@ -72,20 +86,41 @@ function feasible_map(fnum)
     return x, y
 end
 
+function all_map(fnum)
+    p = q = 3
+    r = 2
+    s = 0
+    n = 100
+
+    f, F, lower_D, upper_D, lower_bounds, upper_bounds = getBilevel(fnum)
+
+    Nsamples = 1000
+    a = upper_bounds[1,:]
+    b = upper_bounds[2,:]
+    
+    x = a' .+ (b -a)' .* rand(Nsamples, upper_D)
+
+
+    a = lower_bounds[1,:]; b = lower_bounds[2,:]
+    y = a' .+ (b -a)' .* rand(Nsamples, lower_D)
+
+    return x, y
+end
+
 function test()
 
     for fnum = 1:8
-      f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
-      x, y, best, nevals, _,_ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll; showResults = false)
-      @printf("SMD%d \t F = %e \t f = %e  \t nfes = %d \n", fnum, best.F, best.f, nevals)
-      # println("x: ", x)
-      # println("y: ", y)
+        f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
+        x, y, best, nevals, _,_ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll; showResults = false)
+        @printf("SMD%d \t F = %e \t f = %e  \t nfes = %d \n", fnum, best.F, best.f, nevals)
+        # println("x: ", x)
+        # println("y: ", y)
 
-      # if fnum == 7
-      #     println(">>>>> F = ", smd7(x, y))
-      #     println(">>>>> f = ", smd7_ll(x, y))
-      # end
-      # break
+        # if fnum == 7
+        #     println(">>>>> F = ", smd7(x, y))
+        #     println(">>>>> f = ", smd7_ll(x, y))
+        # end
+        # break
     end
 
     return 
