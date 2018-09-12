@@ -102,7 +102,6 @@ function getWorstVals(Population::Array, searchType=:minimize)
 end
 
 α = β = 0.1
-α0 = β0 = 0.1
 
 function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll::Matrix; showResults = true)
     D_ul, D_ll = size(bounds_ul, 2), size(bounds_ll, 2) 
@@ -132,6 +131,8 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
     ########################################################
     # the sequences
     α0 = β0 = 0.1
+    global α = α0
+    global β = β0
     # β(t::Int, β0::Float64 = 10.0) = (1/β0) * ( 1.0 - (t / max_evals_ll)^3 )
     # α(t::Int, α0::Float64 = 10.0) = β(t, α0)
     ########################################################
@@ -149,6 +150,8 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
     # best solution
     best = getBest(Population, searchType)
 
+    convergence = [best]
+
   
     # start search
     while !stop
@@ -157,7 +160,7 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
 
         # @printf("t = %d \t a = %e \t b = %e \n", t, α, β)
         global α = α0 * (1.0 - (nevals_ul / max_evals_ul)^3)
-        global β = β0 * (1.0 - (nevals_ul / max_evals_ll)^3)
+        global β = β0 * (1.0 - (nevals_ul / max_evals_ll)^9)
         for i in 1:N
 
             # current
@@ -197,6 +200,7 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
 
                 if is_better_mass(sol, best, searchType)
                     best = sol
+                    push!(convergence, best)
                     # @printf("F = %e \t f = %e  \n", best.F, best.f)
                 end
             end
@@ -226,5 +230,5 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
         println("+----------------------------------+")
     end
 
-    return best.x, best.y, best, nevals_ul, Population
+    return best.x, best.y, best, nevals_ul, Population, convergence
 end
