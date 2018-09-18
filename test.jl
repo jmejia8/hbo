@@ -5,17 +5,31 @@ include("hbo.jl")
 # configures problem
 function getBilevel(fnum::Int)
 
-    if fnum < 0
+    if fnum == -1
        F_(x, y) = sum(x.^2 + 0.1cos.(4π*x) + y.^2 + 0.1sin.(4π*y))
        f_(x, y) = sum((x.^2 + y.^2 - 1.0).^2)
        D_ul = 1
        D_ll = 1
 
-       bounds_ul = Array{Float64, 2}([-1  1])'
+       bounds_ul = Array{Float64, 2}([-1.0  1.0])'
        
        bounds_ll = bounds_ul
 
        return f_, F_, D_ll, D_ul, bounds_ll, bounds_ul
+    elseif fnum == -2
+        g(fxy) = cos(fxy/3) + sin(fxy)
+
+        f1_(x, y) = sum(y.^2)/2 + dot(y, x)
+        F1_(x, y) = g(f1_(x, y))
+
+        D_ul = 1
+        D_ll = 1
+
+        bounds_ul = Array{Float64, 2}([-5  5])'
+       
+        bounds_ll = bounds_ul
+
+        return f1_, F1_, D_ll, D_ul, bounds_ll, bounds_ul
     end
     
     D_ul = D_ll = 5
@@ -31,7 +45,7 @@ function getBilevel(fnum::Int)
     return f, F, D_ll, D_ul, bounds_ll, bounds_ul
 end
 
-function feasible_map(fnum)
+function feasible_map(fnum;nsamples=500)
     p = q = 3
     r = 2
     s = 0
@@ -39,7 +53,7 @@ function feasible_map(fnum)
 
     f, F, lower_D, upper_D, lower_bounds, upper_bounds = getBilevel(fnum)
 
-    Nsamples = 1000
+    Nsamples = nsamples
     a = upper_bounds[1,:]
     b = upper_bounds[2,:]
    
@@ -81,9 +95,23 @@ function feasible_map(fnum)
         y[:, q+1:end] = exp.(x[:,p+1:end])
     elseif fnum == 8
         y[:, q+1:end] = (x[:,p+1:end]).^(1/3)
+    elseif fnum == -2
+        y = -x
+    elseif fnum == -1
+        θ = linspace(0,2π, Nsamples)
+        x[:,1] = cos.(θ)
+        y[:,1] = sin.(θ)
     end
 
     return x, y
+end
+
+function best_known_values(fnum)
+    if fnum==-2
+        return -8.0, -1.87868481483642
+    end
+
+    return 1.9209739856726114e-6,  0.8028017347965496
 end
 
 function all_map(fnum)
