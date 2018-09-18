@@ -111,7 +111,7 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
     D = D_ul + D_ll
     κ = 3
     η_max = 2.0
-    N = κ*D
+    N = D < 5 ? κ*5 : κ*D
     max_evals_ul = 3000D
     max_evals_ll = 3000D
     #############################
