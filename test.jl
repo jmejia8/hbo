@@ -1,7 +1,8 @@
 using BilevelBenchmark
 import Printf.@printf
 import Random.randperm
-# using CSVanalyzer
+using CSVanalyzer
+import DelimitedFiles.writedlm
 
 include("hbo.jl")
 
@@ -161,6 +162,7 @@ end
 
 
 function makeStats(nruns = 31)
+    configure()
     nfuns = 8
 
     errors_UL = zeros(nfuns, nruns)
@@ -174,7 +176,7 @@ function makeStats(nruns = 31)
         for i = 1:nruns
             f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
             
-            x, y, best, nevals, _,_ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll; showResults = false)
+            x, y, best, nevals, _,_ = hbo(F, f, bounds_ul, bounds_ll; showResults = false)
             
             @printf("SMD%d \t F = %e \t f = %e  \t nfes = %d \n", fnum, best.F, best.f, nevals)
 
@@ -187,11 +189,11 @@ function makeStats(nruns = 31)
 
     end
 
-    writecsv("output/accuracy_UL.csv", errors_UL)
-    writecsv("output/accuracy_LL.csv", errors_LL)
+    writedlm("output/accuracy_UL.csv", errors_UL, ',')
+    writedlm("output/accuracy_LL.csv", errors_LL, ',')
 
-    writecsv("output/evals_UL.csv", evals_UL)
-    writecsv("output/evals_LL.csv", evals_LL)
+    writedlm("output/evals_UL.csv", evals_UL, ',')
+    writedlm("output/evals_LL.csv", evals_LL, ',')
 
     ##
     println("Upper level")
@@ -209,5 +211,5 @@ function makeStats(nruns = 31)
 
 end
 
-# makeStats()
-test()
+makeStats(3)
+# test()
