@@ -211,5 +211,5 @@ function makeStats(nruns = 31)
 
 end
 
-makeStats(3)
-# test()
+# makeStats()
+test()
