@@ -1,5 +1,6 @@
 import Metaheuristics
 const mh = Metaheuristics
+using CSVanalyzer
 
 include("structures.jl")
 include("tools.jl")
@@ -160,7 +161,7 @@ function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll:
 
         # @printf("t = %d \t a = %e \t b = %e \n", t, α, β)
         global α = α0 * (1.0 - (nevals_ul / max_evals_ul)^3)
-        global β = β0 * (1.0 - (nevals_ul / max_evals_ll)^9)
+        global β = β0 * (1.0 - (nevals_ul / max_evals_ll)^3)
         for i in 1:N
 
             # current

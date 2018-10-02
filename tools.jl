@@ -170,3 +170,8 @@ end
 function isfeasible(element::xfgh_indiv)
     return countViolations(element.g, element.h) == 0
 end
+
+function configure()
+    !isdir("output") && mkdir("output")
+    !isdir("summary") && mkdir("summary")
+end

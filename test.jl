@@ -2,6 +2,8 @@ using BilevelBenchmark
 
 include("hbo.jl")
 
+
+
 # configures problem
 function getBilevel(fnum::Int)
 
@@ -153,3 +155,55 @@ function test()
 
     return 
 end
+
+
+function makeStats(nruns = 31)
+    nfuns = 8
+
+    errors_UL = zeros(nfuns, nruns)
+    errors_LL = zeros(nfuns, nruns)
+
+    evals_UL = zeros(nfuns, nruns)
+    evals_LL = zeros(nfuns, nruns)
+
+    for fnum = 1:nfuns
+
+        for i = 1:nruns
+            f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
+            
+            x, y, best, nevals, _,_ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll; showResults = false)
+            
+            @printf("SMD%d \t F = %e \t f = %e  \t nfes = %d \n", fnum, best.F, best.f, nevals)
+
+            errors_UL[fnum, i] = best.F; errors_LL[fnum, i] = best.f
+            evals_UL[fnum, i] = evals_LL[fnum, i] = nevals
+
+        end
+
+        println("-----------------------------------------------")
+
+    end
+
+    writecsv("output/accuracy_UL.csv", errors_UL)
+    writecsv("output/accuracy_LL.csv", errors_LL)
+
+    writecsv("output/evals_UL.csv", evals_UL)
+    writecsv("output/evals_LL.csv", evals_LL)
+
+    ##
+    println("Upper level")
+    statsToLatex("output/accuracy_UL.csv"; mapping= x->abs.(x))
+    println("-------------------------------------------------")
+
+    println("Lower level")
+    statsToLatex("output/accuracy_LL.csv"; mapping= x->abs.(x))
+    println("-------------------------------------------------")
+
+
+    println("Evaluations")
+    statsToLatex("output/evals_UL.csv"; mapping= x->abs.(x))
+    println("-------------------------------------------------")
+
+end
+
+makeStats()
