@@ -1,5 +1,6 @@
 using BilevelBenchmark
-
+import Printf.@printf
+import Random.randperm
 include("hbo.jl")
 
 # configures problem
@@ -139,7 +140,7 @@ function test()
 
     for fnum = 1:8
         f, F, D_ll, D_ul, bounds_ll, bounds_ul = getBilevel(fnum)
-        x, y, best, nevals, _,_ = hbo(F, f, D_ul, D_ll, bounds_ul, bounds_ll; showResults = false)
+        x, y, best, nevals, _,_ = hbo(F, f, bounds_ul, bounds_ll; showResults = false)
         @printf("SMD%d \t F = %e \t f = %e  \t nfes = %d \n", fnum, best.F, best.f, nevals)
         # println("x: ", x)
         # println("y: ", y)
@@ -153,3 +154,5 @@ function test()
 
     return 
 end
+
+test()

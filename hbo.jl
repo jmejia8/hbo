@@ -11,13 +11,13 @@ function fitnessToMass(fitness::Array{Float64,2}, searchType::Symbol)
     m_ul = minimum(fitness[:,1])
     m_ll = minimum(fitness[:,2])
     
-    m_ul < 0 && (fitness[:,1] = 2abs(m_ul) + fitness[:,1])
-    m_ll < 0 && (fitness[:,1] = 2abs(m_ll) + fitness[:,2])
+    m_ul < 0 && (fitness[:,1] = 2abs(m_ul) .+ fitness[:,1])
+    m_ll < 0 && (fitness[:,1] = 2abs(m_ll) .+ fitness[:,2])
   
 
     if searchType == :minimize
-        fitness[:,1] = 2maximum(fitness[:,1]) - fitness[:,1]
-        fitness[:,2] = 2maximum(fitness[:,2]) - fitness[:,2]
+        fitness[:,1] = 2maximum(fitness[:,1]) .- fitness[:,1]
+        fitness[:,2] = 2maximum(fitness[:,2]) .- fitness[:,2]
     end
 
     return fitness
@@ -59,16 +59,16 @@ function center(U::Array, V::Array, α, β, searchType::Symbol)
     mass = getMass(U, V, α, β, searchType)
 
     a, b = center(U, V, mass)
-    return a, b, getWorstInd(U, searchType), indmin(mass[:,2])
+    return a, b, getWorstInd(U, searchType), argmin(mass[:,2])
 end
 
 
 function apply_nested!(P, F, f, D_ul, D_ll, bounds)
-	nevals_ul = 0
+    nevals_ul = 0
     nevals_ll = 0
     
     for i = 1:length(P)
-		y, fy, nevals = eca(f, P[i], D_ll, bounds)
+        y, fy, nevals = eca(f, P[i], D_ll, bounds)
 
         if fy >= P[i].f
             continue
@@ -84,7 +84,7 @@ function apply_nested!(P, F, f, D_ul, D_ll, bounds)
         nevals_ul += 1
         nevals_ll += nevals
         @printf("fnew = %e \t fold = %e \t | \t Fnew = %e \t Fold = %e  \n", P[i].f, oldf, P[i].F, oldF)
-	end
+    end
 
     return nevals_ul, nevals_ll
 
@@ -103,7 +103,7 @@ end
 
 α = β = 0.1
 
-function hbo(F::Function, f::Function, D_ul, D_ll, bounds_ul::Matrix, bounds_ll::Matrix; showResults = true)
+function hbo(F::Function, f::Function, bounds_ul::Matrix, bounds_ll::Matrix; showResults = true)
     D_ul, D_ll = size(bounds_ul, 2), size(bounds_ll, 2) 
 
     # general parameters
